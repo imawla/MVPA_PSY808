@@ -1,0 +1,82 @@
+#!/bin/bash
+
+## this script extracts beta/COPE/signal intensity from fMRI param estimates
+## outputs are optimized to be used for MVPA analysis in script: 02run_MVPA
+## need FSL and AFNI functions in this script - make sure PATH is set below
+## example dataset provided has 15 subjects with 2 conditions for MVPA
+########################################################
+#### change the following according to personal settings 
+FSLDIR=/app/fsl/5.0.10
+PATH=${FSLDIR}/bin:${PATH}
+export FSLDIR PATH
+
+AFNIDIR=/PROJECTS/tools/afni_gcc33_64
+PATH=${AFNIDIR}:${PATH}
+export AFNIDIR PATH
+
+pdir=~/ISHTIAQ/MVPA #parent directory where data is located
+roidir=$pdir/roi #roi directory
+datadir=$pdir/data #data directory
+cd $pdir
+
+#### input spherical ROI parameters 
+roi_mni_x=42 #MNI x coordinate
+roi_mni_y=16 #MNI y coordinate
+roi_mni_z=0 #MNI z coordinate
+roi_size=5 #spherical ROI radius
+roi_name=r_insula
+# MAKE SURE LABEL VALUES ARE IN NAME OF FILE
+# example: for cope_sub01_cond01.nii.gz, cond01 is label value
+# code will need to be changed if "cond01" is not after second underscore, as above
+truelabel0=cond01 #label of 0
+truelabel1=cond02 #label of 1
+#### input ends here 
+########################################################
+echo "starting data extraction for MVPA analysis on $(date)"
+echo ""
+# conversion from MNI to voxel coordinates (2x2x2 image)
+roi_vox_x=$(( (roi_mni_x/2)*(-1)+45 ))
+roi_vox_y=$(( (roi_mni_y/2)+63 ))
+roi_vox_z=$(( (roi_mni_z/2)+36 ))
+
+# produce an ROI based on 
+echo "producing spherical ROI..."
+cd $roidir
+fslmaths $FSLDIR/data/standard/MNI152_T1_2mm_brain.nii.gz \
+	-mul 0 -add 1 -roi $roi_vox_x 1 $roi_vox_y 1 $roi_vox_z 1 0 1 \
+	"$roi_name"_point -odt float
+fslmaths "$roi_name"_point -kernel sphere $roi_size -fmean "$roi_name"_sphere -odt float
+fslmaths "$roi_name"_sphere.nii.gz -bin "$roi_name"_sphere_bin.nii.gz
+
+# obtain list of images from $datadir
+echo "obtaining list of images..."
+ls $datadir > $pdir/subjlist.txt
+
+cd $pdir
+### remove the list of labels if it exists before
+if [ -e $pdir/labellist.txt ]; then
+	rm $pdir/labellist.txt
+fi
+### remove any previously extracted values
+if [ -e $pdir/roi_vals_per_vox_per_subj.txt ]; then
+	rm $pdir/roi_vals_per_vox_per_subj.txt
+fi
+
+echo "producing label list and extracting voxelwise values for..."
+for subject in `cat subjlist.txt`; do
+	echo "		$subject" 
+	truelabel=$(echo $subject | awk -F'[._]' '{print $3}')
+	if [[ $truelabel = $truelabel0 ]]; then
+		echo "0" >> labellist.txt #produces a list of true label lists for MVPA
+	elif [[ $truelabel = $truelabel1 ]]; then
+		echo "1" >> labellist.txt
+	fi
+	# now extract mean parameter estimate from ROI
+	# 3dmaskdump is an AFNI tool that gives voxelwise parameter estimates/signal intensity
+	# add flag -xyz after -noijk to know which precise voxel location the datapoint came from
+	roi_vals_per_vox=`3dmaskdump -quiet -noijk -mask $roidir/"$roi_name"_sphere_bin.nii.gz $datadir/$subject`
+	echo $roi_vals_per_vox >> roi_vals_per_vox_per_subj.txt 
+done
+echo ""
+echo "process done on $(date)"
+echo "open matlab to run 02_run_MVPA"
