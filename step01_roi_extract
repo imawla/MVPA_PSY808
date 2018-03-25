@@ -102,5 +102,4 @@ for subject in `cat subjlist.txt`; do
 	echo $roi_vals_per_vox >> roi_vals_per_vox_per_subj.txt 
 done
 echo ""
-echo "process done on $(date)"
-echo "open matlab to run 02_run_MVPA"
+echo "ROI processing done on $(date)"

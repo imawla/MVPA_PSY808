@@ -1,0 +1,10 @@
+#!/bin/bash
+
+source ./step01_roi_extract
+echo ""
+echo "starting MATLAB to run MVPA classifications on $(date)"
+echo ""
+matlab -nodisplay -r "step02_run_MVPA ; exit" | grep "The average"
+echo ""
+echo "Classifications completed on $(date)"
+
