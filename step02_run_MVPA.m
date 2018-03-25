@@ -26,6 +26,9 @@ k = 1; % How many neighbors for kNN classifier (usually odd)
 Nfolds = 12;  % How many folds (divisions of data) for cross-validation
 indices = crossvalind('Kfold', size(data,1), Nfolds);
 
+% We are using a deprecated function, so turn off warnings for it
+warning off bioinfo:knnclassify:incompatibility
+
 % Randomly divide data into folds. indices is a vector where each entry
 % is an integer between 1 and Nfolds, indicating which fold each data
 % vector belongs to
@@ -42,7 +45,8 @@ for i = 1:Nfolds
     % Update the CP object with the classification results from this fold
 end
 
-cp.CorrectRate % Output the average correct classification rate
+% Output the average correct classification rate
+fprintf('The average correct classification rate using k-nearest neighbor was %.4f\n', cp.CorrectRate);
  
 %% SVM classification with N-fold cross validation
 
@@ -67,4 +71,5 @@ for i = 1:Nfolds
     % Update the CP object with the classification results from this fold
 end
 
-cp.CorrectRate % Output the average correct classification rate
+% Output the average correct classification rate
+fprintf('The average correct classification rate using support vector machine was %.4f\n', cp.CorrectRate);
