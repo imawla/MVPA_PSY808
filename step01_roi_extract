@@ -5,16 +5,40 @@
 ## need FSL and AFNI functions in this script - make sure PATH is set below
 ## example dataset provided has 15 subjects with 2 conditions for MVPA
 ########################################################
-#### change the following according to personal settings 
-FSLDIR=/app/fsl/5.0.10
-PATH=${FSLDIR}/bin:${PATH}
-export FSLDIR PATH
+#### change the following according to personal settings
 
-AFNIDIR=/PROJECTS/tools/afni_gcc33_64
-PATH=${AFNIDIR}:${PATH}
-export AFNIDIR PATH
+####  If you do not have FSL in your path, set it here
+if [ -z "$FSLDIR" ] ; then
+    FSLDIR=/app/fsl/5.0.10
+    PATH=${FSLDIR}/bin:${PATH}
+    export FSLDIR PATH
+fi
 
-pdir=~/ISHTIAQ/MVPA #parent directory where data is located
+####  Some FSL installations (NeuroDebian) put FSL's data in a
+####  different location.  Set the path to the templates here.
+
+if [ -z "$FSL_TEMPLATES" ] ; then
+    if [ -d /usr/share/data/fsl-mni152-templates ] ; then
+        # If this is NeuroDebian's installation, this is where the MNI templates
+        # will be.
+        FSL_TEMPLATES=/usr/share/data/fsl-mni152-templates
+    else
+        # The standard location for FSL 5.0.10
+        FSL_TEMPLATES=$FSLDIR/data/standard
+    fi
+fi
+
+####  We need 3dmaskdump, so we check for it
+which 3dmaskdump | grep -q 3dmaskdump
+AFNI_OK=$?
+# If 3dmaskdump is on the path, AFNI_OK will be 0
+if [ $AFNI_OK -gt 0 ] ; then
+    # Not found, so set your path to AFNI here
+    AFNIDIR=/PROJECTS/tools/afni_gcc33_64
+    export PATH=${AFNIDIR}:${PATH}
+fi
+
+pdir="$HOME/github/MVPA_PSY808" #parent directory where data is located
 roidir=$pdir/roi #roi directory
 datadir=$pdir/data #data directory
 cd $pdir
@@ -78,5 +102,4 @@ for subject in `cat subjlist.txt`; do
 	echo $roi_vals_per_vox >> roi_vals_per_vox_per_subj.txt 
 done
 echo ""
-echo "process done on $(date)"
-echo "open matlab to run 02_run_MVPA"
+echo "ROI processing done on $(date)"
